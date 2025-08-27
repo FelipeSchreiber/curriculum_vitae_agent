@@ -1,3 +1,3 @@
-from .main import email_agent
+from .main import EmailAgent
 
-__all__ = ["email_agent"]
+__all__ = ["EmailAgent"]

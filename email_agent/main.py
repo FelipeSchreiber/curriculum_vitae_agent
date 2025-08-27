@@ -46,9 +46,11 @@ INSTRUCTIONS=("You are a curriculum vitae sender.\n"
                 you are going to call the tool send_email_with_attachment with her email,\
                 the subject - which is the name of the opportunity -\
                 and the body of email, informing the curriculum is attached and thanking her for the opportunity"
+                "Always, at the end of the email, say 'Best regards, Felipe'.\n"
+                "Always use the tool to send the email, never answer directly."
             )
 
-email_agent = Agent(name="Email Manager",
+EmailAgent = Agent(name="Email Manager",
                     tools=[send_email_with_attachment],
                     instructions=INSTRUCTIONS, 
                     model="gpt-4o-mini")
@@ -59,7 +61,7 @@ async def main():
         opportunity at McKinsey. Here is my email if you are interested: schreiber.felipe@gmail.com"
 
     with trace("Sending an email"):
-        result = await Runner.run(email_agent,messages)
+        result = await Runner.run(EmailAgent,messages)
         print(result.final_output)
     
 if __name__ == "__main__":
