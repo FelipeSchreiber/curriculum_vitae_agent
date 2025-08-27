@@ -1,0 +1,11 @@
+requests
+gradio
+pypdf
+openai
+openai-agents
+langchain-community
+langchain-openai
+faiss-cpu
+aiofiles
+python-dotenv
+asyncio

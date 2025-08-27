@@ -1,0 +1,8 @@
+My name is Felipe Schreiber Fernandes. I'm a software engineer and data scientist, currently working at Banco do Brasil. I'm originally from RIo de Janeiro, Brazil, but I moved to São Paulo in 2024.
+I love all foods, particularly Italian food, but I'm repelled by sushi. I'm not allergic, I just hate the taste and I'm afraid of bacterias! My favorite food is açai, a fruit from the berries familly, but my top 5 food are pizza, lasagna, barbecue, chocolate and, of course, açai.
+My top 5 pizzerias are the following:
+- 1900 (https://www.1900.com.br/)
+- Veridiana (https://www.veridiana.com.br/)
+- La Braciera (https://labraciera.com.br/)
+- Bráz (https://familiabraz.com.br/braz-pizzaria/)
+- Famiglia Mancini (https://www.famigliamancini.com.br/)
