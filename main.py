@@ -1,5 +1,5 @@
+from email_agent.main import EmailAgent, send_email_with_attachment
 from dotenv import load_dotenv
-from openai import OpenAI
 import json
 import os
 import requests
@@ -9,10 +9,12 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
+from agents import Agent, Runner, trace, function_tool 
 
 load_dotenv(override=True)
 
 def push(text):
+    """Send a push notification via Pushover"""
     requests.post(
         "https://api.pushover.net/1/messages.json",
         data={
@@ -45,7 +47,7 @@ retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 def _format_docs(docs) -> str:
     return "\n\n".join(d.page_content for d in docs)
 
-# A terse, factual QA prompt typical for RAG (keep concise, don’t hallucinate) 
+# A terse, factual QA prompt typical for RAG (keep concise, don't hallucinate) 
 RAG_QA_PROMPT = ChatPromptTemplate.from_messages([
     ("system",
      "You are a concise, factual assistant. Use ONLY the provided context. "
@@ -53,9 +55,11 @@ RAG_QA_PROMPT = ChatPromptTemplate.from_messages([
     ("human", "Context:\n{context}\n\nQuestion: {question}\nAnswer in <=3 sentences.")
 ])
 
-llm = ChatOpenAI(temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
+@function_tool
 def rag_search(question: str) -> str:
+    """Use this tool to retrieve Felipe data about his thesis and academic/professional projects"""
     docs = retriever.invoke(question)
     context = _format_docs(docs)
     messages = RAG_QA_PROMPT.format_messages(context=context, question=question)
@@ -77,129 +81,98 @@ def rag_search(question: str) -> str:
     }
     return json.dumps(payload, ensure_ascii=False)
 
-
-def record_user_details(email, name="Name not provided", notes="not provided"):
+@function_tool
+def record_user_details(email: str, 
+                        name: str = "Name not provided", 
+                        notes: str = "not provided"):
+    """Use this tool to record that a user is interested in being in touch and provided an email address"""
     push(f"Recording {name} with email {email} and notes {notes}")
     return {"recorded": "ok"}
 
-def record_unknown_question(question):
+
+@function_tool
+def record_unknown_question(question: str):
+    """Always use this tool to record any question that couldn't be answered as you didn't know the answer"""
     push(f"{question}")
     return {"recorded": "ok"}
 
-record_user_details_json = {
-    "name": "record_user_details",
-    "description": "Use this tool to record that a user is interested in being in touch and provided an email address",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "email": {
-                "type": "string",
-                "description": "The email address of this user"
-            },
-            "name": {
-                "type": "string",
-                "description": "The user's name, if they provided it"
-            }
-            ,
-            "notes": {
-                "type": "string",
-                "description": "Any additional information about the conversation that's worth recording to give context"
-            }
-        },
-        "required": ["email"],
-        "additionalProperties": False
-    }
-}
-
-record_unknown_question_json = {
-    "name": "record_unknown_question",
-    "description": "Always use this tool to record any question that couldn't be answered as you didn't know the answer",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "question": {
-                "type": "string",
-                "description": "The question that couldn't be answered"
-            },
-        },
-        "required": ["question"],
-        "additionalProperties": False
-    }
-}
-
-rag_search_json = {
-    "name": "rag_search",
-    "description": "Use this tool to retrieve Felipe data about his thesis and academic/professional projects",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "question": {
-                "type": "string",
-                "description": "The user question"
-            }
-        },
-        "required": ["question"],
-        "additionalProperties": False
-    }
-}
-
-tools = [{"type": "function", "function": record_user_details_json},
-        {"type": "function", "function": record_unknown_question_json},
-        {"type": "function", "function": rag_search_json}]
+# --- Assemble all tools ---
+tools = [record_user_details, record_unknown_question, rag_search] 
 
 
-class Me:
+# --- Define Agent instructions ---
+INSTRUCTIONS = """
+You are the Recruiter Manager Agent. Felipe Schreiber Fernandes Linkedin Profile is **https://www.linkedin.com/in/felipe-schreiber/**. 
 
-    def __init__(self):
-        self.openai = OpenAI()
-        self.name = "Felipe Schreiber Fernandes"
-        self.linkedin = "https://www.linkedin.com/in/felipe-schreiber/"
-        with open("me/summary.txt", "r", encoding="utf-8") as f:
-            self.summary = f.read()
+You have access to three tools and one handoff:
+Tools:  
+1. `record_user_details` → send Felipe a mobile notification about a recruiter's contact.  
+2. `record_unknown_question` → record any question you couldn't answer as you didn't know the answer.
+3. `rag_search` → retrieve Felipe's thesis, academic, and professional project information.  
 
+Handoff:
+- `EmailAgent` → send Felipe's CV as a PDF attachment to a recruiter's email address.
 
-    def handle_tool_call(self, tool_calls):
-        results = []
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            arguments = json.loads(tool_call.function.arguments)
-            print(f"Tool called: {tool_name}", flush=True)
-            tool = globals().get(tool_name)
-            result = tool(**arguments) if tool else {}
-            results.append({"role": "tool","content": json.dumps(result),"tool_call_id": tool_call.id})
-        return results
-    
-    def system_prompt(self):
-        system_prompt = f"You are acting as {self.name}. You are answering questions on {self.name}'s website, \
-particularly questions related to {self.name}'s career, background, skills and experience. \
-Your responsibility is to represent {self.name} for interactions on the website as faithfully as possible. \
-You are given a summary of {self.name}'s background and LinkedIn profile which you can use to answer questions. \
-Be professional and engaging, as if talking to a potential client or future employer who came across the website. \
-Everytime someone asks you a question, use the rag_search tool to retrieve useful data.\
-If you don't know the answer to any question, use your record_unknown_question tool to record the question that you couldn't answer, even if it's about something trivial or unrelated to career. \
-If the user is engaging in discussion, try to steer them towards getting in touch via email; ask for their email and record it using your record_user_details tool. "
+Your responsibilities:  
+- **When a recruiter sends their name, email, and a role/job opportunity:**  
+  1. Call `record_user_details` with the recruiter's name, email, and role.  
+  2. Call `EmailAgent` with the recruiter's email, the role as the subject, and a polite body explaining the CV is attached.  
 
-        system_prompt += f"\n\n## Summary:\n{self.summary}\n\n## LinkedIn Profile:\n{self.linkedin}\n\n"
-        system_prompt += f"With this context, please chat with the user, always staying in character as {self.name}."
-        return system_prompt
-    
-    def chat(self, message, history):
-        messages = [{"role": "system", "content": self.system_prompt()}] + history + [{"role": "user", "content": message}]
-        done = False
-        while not done:
-            response = self.openai.chat.completions.create(model="gpt-4o-mini", messages=messages, tools=tools)
-            if response.choices[0].finish_reason=="tool_calls":
-                message = response.choices[0].message
-                tool_calls = message.tool_calls
-                results = self.handle_tool_call(tool_calls)
-                messages.append(message)
-                messages.extend(results)
-            else:
-                done = True
-        return response.choices[0].message.content
-    
+- **When asked about Felipe's thesis, academic, or professional projects:**  
+  - Use the `rag_search` tool with the recruiter's question.  
+  - Return the result from `rag_search` directly to the recruiter, possibly rephrased politely. Always include references from the `sources` field to indicate credibility.  
+
+Guidelines:  
+- Do not invent details. Always use tools to answer or act.  
+- Always use polite, professional, and concise wording.  
+- If a recruiter message mixes both (job opportunity + question about Felipe's background), you must **do both actions**:  
+  - Notify via Pushover and send CV.  
+  - Answer using `rag_search`.  
+
+Example A — if recruiter says:  
+*"Hi, I'm Maria from Deloitte, interested in a Data Analyst role. My email is maria.hr@deloitte.com"*  
+
+You must:  
+1. Call `record_user_details(email="maria.hr@deloitte.com", name="Maria", role="Data Analyst")`.  
+2. Call `EmailAgent(to_email="maria.hr@deloitte.com", subject="Data Analyst", body="Dear Maria, thank you for reaching out. Please find attached my Curriculum Vitae for your consideration. Best regards, Felipe Schreiber Fernandes.")`.  
+
+Example B — if recruiter says:  
+*"Can you tell me more about Felipe's thesis?"*  
+
+You must:  
+- Call `rag_search(question="Tell me more about Felipe's thesis")` and return the answer and sources.  
+
+Example C — if recruiter says:  
+*"I'm João from Google hiring for an ML Engineer role. My email is joao@google.com. Also, what kind of NLP projects has Felipe done?"*  
+
+You must:  
+1. Call `record_user_details(email="joao@google.com", name="João", role="ML Engineer")`.  
+2. Call `EmailAgent(to_email="joao@google.com", subject="ML Engineer", body="Dear João, thank you for reaching out. Please find attached my Curriculum Vitae for your consideration. Best regards, Felipe Schreiber Fernandes.")`.  
+3. Call `rag_search(question="What kind of NLP projects has Felipe done?")` and return the answer with sources.
+
+Example D — if recruiter says:
+What is Felipe's girlfriend's name?
+You must:
+- Call `record_unknown_question(question="What is Felipe's girlfriend's name?")`.
+"""
+
+# --- Instantiate the agent ---
+cv_agent = Agent(
+    name="Felipe Schreiber Fernandes' Assistant",
+    tools=tools,
+    instructions=INSTRUCTIONS,
+    handoffs=[EmailAgent],
+    model="gpt-4o-mini"
+)
+
+async def chat_with_agent(message, history=None):
+    if history is None:
+        history = []
+
+    with trace("Agent answering"):
+        result = await Runner.run(cv_agent, message)
+    return result.final_output
 
 if __name__ == "__main__":
-    me = Me()
-    gr.ChatInterface(me.chat, type="messages").launch()
+    gr.ChatInterface(chat_with_agent, type="messages").launch()
     
