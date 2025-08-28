@@ -22,7 +22,8 @@ It ensures that every recruiter who reaches out:
 - 📲 Triggers a **push notification** via Pushover.  
 - 📧 Receives an **automatic email with Felipe’s CV** attached.  
 - 📚 Can ask questions about Felipe’s **thesis, academic, and professional projects** via Retrieval-Augmented Generation (RAG).  
-- 🛡️ Has sensitive or inappropriate questions safely **logged** without leaking personal data.
+- 🛡️ Has sensitive or inappropriate questions safely **logged** without leaking personal data.  
+- ✨ All outgoing emails are **guarded and formatted** for professionalism and safety.
 </div>
 
 ---
@@ -32,9 +33,11 @@ It ensures that every recruiter who reaches out:
 
 - 🔔 **Pushover Integration** – Instant recruiter notifications to Felipe’s phone.  
 - 📄 **Automatic CV Delivery** – Sends Felipe’s CV as a PDF attachment via SendGrid.  
+- 🛡️ **Guardrail Agent** – Ensures email bodies are safe, polite, and professional.  
+- ✨ **Formatter Agent** – Beautifies email bodies, adds salutations, line breaks, and proper closing.  
 - 🔎 **RAG Search** – Provides fact-based answers about Felipe’s work (thesis, NLP projects, etc.) using FAISS + OpenAI embeddings.  
 - 🛑 **Unknown Question Logging** – Records any irrelevant or unanswerable recruiter queries.  
-- 🤝 **Multi-step Workflows** – When recruiters both introduce a job and ask project questions, the agent handles **both actions** in parallel.  
+- 🤝 **Multi-step Workflows** – When recruiters both introduce a job and ask project questions, the agent handles **both actions** in parallel.
 </div>
 
 ---
@@ -46,6 +49,18 @@ It ensures that every recruiter who reaches out:
 graph TD
     Recruiter[Recruiter Email/Message] -->|Triggers| CVAgent
     CVAgent -->|1. Notify| Pushover
-    CVAgent -->|2. Handoff| EmailAgent
-    CVAgent -->|3. Answer| RAG_Search
-    CVAgent -->|4. Fallback| Record_Unknown
+    CVAgent -->|2. Draft Email| email_agent
+    email_agent -->|3. Guardrail Check| guardrail_agent
+    guardrail_agent -->|4. Formatting| formatter_agent
+    formatter_agent -->|5. Send CV| Send_Email
+    CVAgent -->|6. Answer Questions| RAG_Search
+    CVAgent -->|7. Fallback| Record_Unknown
+
+git clone https://github.com/yourusername/recruiter-manager-agent.git
+cd recruiter-manager-agent
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
+cp .env.example .env  # set your API keys and email credentials
+python main.py
+ 
