@@ -82,8 +82,8 @@ graph TD
 <h2>🚀 Getting Started</h2>
 
 ```bash
-git clone https://github.com/yourusername/recruiter-manager-agent.git
-cd recruiter-manager-agent
+git clone https://github.com/FelipeSchreiber/curriculum_vitae_agent.git
+cd curriculum_vitae_agent
 python -m venv venv
 venv\Scripts\activate  # On Windows, or `source venv/bin/activate` on Mac/Linux
 pip install -r requirements.txt
