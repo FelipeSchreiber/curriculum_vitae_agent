@@ -59,7 +59,8 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 @function_tool
 def rag_search(question: str) -> str:
-    """Use this tool to retrieve Felipe data about his thesis and academic/professional projects"""
+    """Use this tool to retrieve Felipe data about his thesis, academic/professional projects,
+    awards, publications, certifications, previous jobs. Always use this tool to answer any question about Felipe's background."""
     docs = retriever.invoke(question)
     context = _format_docs(docs)
     messages = RAG_QA_PROMPT.format_messages(context=context, question=question)
@@ -168,7 +169,7 @@ You have access to the following tools:
 IMPORTANT: **Always use rag_search to answer questions about Felipe's background.** 
 
 Handoff:
-- `email_agent` → Send Felipe’s CV as a PDF attachment via email.
+- `email_agent` → Send Felipe's CV as a PDF attachment via email.
 
 Your behavior rules:
 1. **Recruiter Contact**: 

@@ -28,8 +28,10 @@ Then, pass the polished body along to the send_email_with_attachment tool.
 
 # --- formatter Agent ---
 formatter_agent = Agent(
-    name="Guardrail Agent",
+    name="formatter_agent",
     instructions=EMAIL_FORMATTER_INSTRUCTIONS,
     handoff_description=handoff_description,  # guardrail tool available here
     model="gpt-4o-mini"
 )
+
+formatter_tool = formatter_agent.as_tool(tool_name="formatter_agent", tool_description=handoff_description)
