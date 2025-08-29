@@ -1,4 +1,5 @@
 from email_agent.main import email_agent, send_email_with_attachment
+from deep_research_agent.research_agent import research_agent
 from dotenv import load_dotenv
 import json
 import os
@@ -9,7 +10,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
-from agents import Agent, Runner, trace, function_tool 
+from agents import Agent, WebSearchTool, Runner, trace, function_tool 
 
 load_dotenv(override=True)
 
@@ -59,7 +60,8 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 @function_tool
 def rag_search(question: str) -> str:
-    """Use this tool to retrieve Felipe data about his thesis and academic/professional projects"""
+    """Use this tool to retrieve Felipe data about his thesis, academic/professional projects,
+    awards, publications, certifications, previous jobs. Always use this tool to answer any question about Felipe's background."""
     docs = retriever.invoke(question)
     context = _format_docs(docs)
     messages = RAG_QA_PROMPT.format_messages(context=context, question=question)
@@ -97,7 +99,7 @@ def record_unknown_question(question: str):
     return {"recorded": "ok"}
 
 # --- Assemble all tools ---
-tools = [record_user_details, record_unknown_question, rag_search] 
+tools = [record_user_details, record_unknown_question, rag_search, WebSearchTool(search_context_size="low")] 
 
 
 # --- Define Agent instructions ---
@@ -167,8 +169,9 @@ You have access to the following tools:
 
 IMPORTANT: **Always use rag_search to answer questions about Felipe's background.** 
 
-Handoff:
-- `email_agent` → Send Felipe’s CV as a PDF attachment via email.
+Handoffs:
+- `email_agent` → Send Felipe's CV as a PDF attachment via email.
+- `research_agent` → Conduct deep research on topics/questions beyond Felipe's background.
 
 Your behavior rules:
 1. **Recruiter Contact**: 
@@ -219,6 +222,10 @@ C. Mixed message:
 D. Irrelevant/personal question:
 "What is Felipe's girlfriend's name?"
 - Action: `record_unknown_question(question="What is Felipe's girlfriend's name?")`
+
+E. Research request:
+"I'm looking for information on the latest trends in AI for healthcare."
+- Action: `research_agent(query="latest trends in AI for healthcare")`
 """
 
 
@@ -227,7 +234,7 @@ cv_agent = Agent(
     name="Felipe Schreiber Fernandes' Assistant",
     tools=tools,
     instructions=INSTRUCTIONS,
-    handoffs=[email_agent],
+    handoffs=[email_agent, research_agent],
     model="gpt-4o-mini"
 )
 

@@ -24,6 +24,7 @@ It ensures that every recruiter who reaches out:
 - 📚 Can ask questions about Felipe’s **thesis, academic, and professional projects** via Retrieval-Augmented Generation (RAG).  
 - 🛡️ Has sensitive or inappropriate questions safely **logged** without leaking personal data.  
 - ✨ All outgoing emails are **guarded and formatted** for professionalism and safety.
+- 🔬 **Deep Research Pipeline** – Uses a multi-step agent to perform web research and generate detailed reports for recruiter queries.
 </div>
 
 ---
@@ -38,7 +39,21 @@ It ensures that every recruiter who reaches out:
 - 🔎 **RAG Search** – Provides fact-based answers about Felipe’s work (thesis, NLP projects, etc.) using FAISS + OpenAI embeddings.  
 - 🛑 **Unknown Question Logging** – Records any irrelevant or unanswerable recruiter queries.  
 - 🤝 **Multi-step Workflows** – When recruiters both introduce a job and ask project questions, the agent handles **both actions** in parallel.
+- 🧠 **Research Agent Pipeline** – Plans searches, performs web research, and writes comprehensive reports using OpenAI agents.
 </div>
+
+---
+
+<div style="background:#222;color:#eee;padding:20px;border-radius:12px;">
+<h2>🔬 Deep Research Pipeline</h2>
+
+The **Research Agent** automates multi-step web research for recruiter queries:
+1. **Plans searches** relevant to the recruiter’s question.
+2. **Performs web searches** asynchronously.
+3. **Synthesizes results** into a detailed, markdown-formatted report.
+4. **Streams status updates** throughout the process for transparency.
+
+This enables recruiters to receive not only CVs and project answers, but also in-depth, up-to-date research on Felipe’s expertise or market trends.
 
 ---
 
@@ -54,13 +69,32 @@ graph TD
     guardrail_agent -->|4. Formatting| formatter_agent
     formatter_agent -->|5. Send CV| Send_Email
     CVAgent -->|6. Answer Questions| RAG_Search
-    CVAgent -->|7. Fallback| Record_Unknown
+    CVAgent -->|7. Deep Research| Research_Agent
+    Research_Agent -->|a. Plan| Plan_Searches
+    Research_Agent -->|b. Search| Perform_Searches
+    Research_Agent -->|c. Report| Write_Report
+    CVAgent -->|8. Fallback| Record_Unknown
+```
 
-git clone https://github.com/yourusername/recruiter-manager-agent.git
-cd recruiter-manager-agent
+---
+
+<div style="background:#222;color:#eee;padding:20px;border-radius:12px;">
+<h2>🚀 Getting Started</h2>
+
+```bash
+git clone https://github.com/FelipeSchreiber/curriculum_vitae_agent.git
+cd curriculum_vitae_agent
 python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+venv\Scripts\activate  # On Windows, or `source venv/bin/activate` on Mac/Linux
 pip install -r requirements.txt
-cp .env.example .env  # set your API keys and email credentials
+cp .env.example .env  # Set your API keys and email credentials
 python main.py
- 
+```
+</div>
+
+---
+
+<div style="background:#222;color:#eee;padding:20px;border-radius:12px;">
+<h2>📝 License & Credits</h2>
+This project uses OpenAI, FAISS, and SendGrid.  
+See [LICENSE](LICENSE) for details.
